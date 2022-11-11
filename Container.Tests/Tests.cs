@@ -95,5 +95,36 @@ namespace Container.Tests
             Assert.IsNotNull(serviceB);
             Assert.AreNotSame(serviceA, serviceB.ServiceA);
         }
+
+        [TestMethod]
+        public void UseMadeOfToBuildWithDependencyFromContainer()
+        {
+            this.container = new Container();
+            this.container.Register<IServiceA, ServiceA>();
+            this.container.Register<IServiceB, ServiceB>
+                (made: Made.Of(
+                    () => new ServiceB(Arg.Of<IServiceA>())));
+            var serviceB = this.container.Resolve<IServiceB>();
+            Assert.IsNotNull(serviceB);
+            var otherB = this.container.Resolve<IServiceB>();
+            Assert.AreNotSame(serviceB.ServiceA, otherB.ServiceA);
+        }
+
+        [TestMethod]
+        public void UseMadeOfToBuildWithExplicitDependency()
+        {
+            this.container = new Container();
+            this.container.Register<IServiceA, ServiceA>();
+            var serviceA = this.container.Resolve<IServiceA>();
+            Assert.IsNotNull(serviceA);
+
+            this.container.Register<IServiceB, ServiceB>
+            (made: Made.Of(
+                () => new ServiceB(serviceA)));
+            var serviceB = this.container.Resolve<IServiceB>();
+            Assert.IsNotNull(serviceB);
+            var otherB = this.container.Resolve<IServiceB>();
+            Assert.AreSame(serviceB.ServiceA, otherB.ServiceA);
+        }
     }
 }
