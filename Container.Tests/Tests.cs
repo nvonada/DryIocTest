@@ -126,5 +126,42 @@ namespace Container.Tests
             var otherB = this.container.Resolve<IServiceB>();
             Assert.AreSame(serviceB.ServiceA, otherB.ServiceA);
         }
+
+        [TestMethod]
+        public void UseMadeOfToBuildWithExplicitPrimitiveDependency()
+        {
+            this.container = new Container();
+            this.container.Register<IServiceA, ServiceA>();
+            var serviceA = this.container.Resolve<IServiceA>();
+            Assert.IsNotNull(serviceA);
+
+            this.container.Register<IServiceB, ServiceBWithPrimitives>
+            (made: Made.Of(
+                () => new ServiceBWithPrimitives("Value", Arg.Of<IServiceA>())));
+            var serviceB = this.container.Resolve<IServiceB>();
+            Assert.IsNotNull(serviceB);
+            Assert.AreEqual("Value", serviceB.SomeMethodB(0.0));
+            Assert.IsInstanceOfType(serviceB.ServiceA, typeof(ServiceA));
+        }
+
+        [TestMethod]
+        public void WeakReferenceRegistration()
+        {
+            // Same as ExternallyControlledLifetimeManager in Unity
+            this.container = new Container();
+            this.container.Register<IServiceA, ServiceA>(Reuse.Singleton, setup: Setup.With(weaklyReferenced: true));
+
+            TestFirst();
+            GC.Collect();
+            Assert.ThrowsException<ContainerException>(() => this.container.Resolve<IServiceA>());
+
+            void TestFirst()
+            {
+                var serviceA = this.container.Resolve<IServiceA>();
+                var sameA = this.container.Resolve<IServiceA>();
+                Assert.AreSame(serviceA, sameA);
+                Assert.AreEqual(serviceA.InstanceA, sameA.InstanceA);
+            }
+        }
     }
 }
